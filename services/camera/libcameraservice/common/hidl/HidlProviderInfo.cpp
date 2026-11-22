@@ -836,8 +836,15 @@ HidlProviderInfo::HidlDeviceInfo3::HidlDeviceInfo3(
 status_t HidlProviderInfo::HidlDeviceInfo3::setTorchMode(bool enabled) {
     using hardware::camera::common::V1_0::TorchMode;
     const sp<hardware::camera::device::V3_2::ICameraDevice> interface = startDeviceInterface();
-    Status s = interface->setTorchMode(enabled ? TorchMode::ON : TorchMode::OFF);
-    return mapToStatusT(s);
+    if (interface == nullptr) {
+        return DEAD_OBJECT;
+    }
+    auto result = interface->setTorchMode(enabled ? TorchMode::ON : TorchMode::OFF);
+    if (!result.isOk()) {
+        ALOGE("%s: Torch request failed: %s", __FUNCTION__, result.description().c_str());
+        return result.isDeadObject() ? DEAD_OBJECT : UNKNOWN_ERROR;
+    }
+    return mapToStatusT(static_cast<Status>(result));
 }
 
 status_t HidlProviderInfo::HidlDeviceInfo3::turnOnTorchWithStrengthLevel(
